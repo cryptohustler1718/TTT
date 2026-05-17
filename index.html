@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ten Thousand Tokens — Protocol Calculator</title>
+  <meta name="description" content="Interactive fee calculator and protocol analysis for the Ten Thousand Tokens NFT collection. Model your earnings as a holder or launcher." />
+  <meta property="og:title" content="Ten Thousand Tokens — Protocol Calculator" />
+  <meta property="og:description" content="Model your earnings. Understand the burn-to-launch mechanism. Powered by on-chain math." />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;700;900&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #030306;
+      --surface:     #0C0C14;
+      --surface-2:   #13131E;
+      --surface-3:   #1A1A28;
+      --border:      rgba(255,255,255,0.07);
+      --border-hi:   rgba(255,255,255,0.14);
+      --gold:        #F5C842;
+      --gold-dim:    rgba(245,200,66,0.12);
+      --gold-glow:   rgba(245,200,66,0.25);
+      --teal:        #3DFFC0;
+      --teal-dim:    rgba(61,255,192,0.10);
+      --coral:       #FF6B35;
+      --coral-dim:   rgba(255,107,53,0.12);
+      --purple:      #9B7FFF;
+      --purple-dim:  rgba(155,127,255,0.12);
+      --text:        #EEEAE2;
+      --text-muted:  #7A7670;
+      --text-dim:    #3A3935;
+      --font-display: 'Unbounded', sans-serif;
+      --font-mono:    'IBM Plex Mono', monospace;
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: var(--gold); color: #000; }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+    /* ─── ORBITAL BG ─── */
+    .orbital-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .orbital-bg svg { width: 120vmax; height: 120vmax; opacity: 0.18; }
+    .ring { fill: none; stroke: rgba(245,200,66,0.35); }
+    .ring-1 { animation: orbit-cw 80s linear infinite; transform-origin: 500px 500px; }
+    .ring-2 { animation: orbit-ccw 120s linear infinite; transform-origin: 500px 500px; }
+    .ring-3 { animation: orbit-cw 160s linear infinite; transform-origin: 500px 500px; }
+    .moon { fill: rgba(245,200,66,0.7); }
+    @keyframes orbit-cw  { to { transform: rotate(360deg);  } }
+    @keyframes orbit-ccw { to { transform: rotate(-360deg); } }
+
+    /* ─── PIXEL GLYPH PATTERN ─── */
+    .glyph-pattern {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        radial-gradient(circle at 15% 25%, rgba(245,200,66,0.03) 0%, transparent 40%),
+        radial-gradient(circle at 85% 70%, rgba(61,255,192,0.03) 0%, transparent 40%);
+    }
+
+    /* ─── LAYOUT ─── */
+    .page { position: relative; z-index: 1; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(3,3,6,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-size: 12px; font-weight: 700;
+      color: var(--text); text-decoration: none;
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo-glyph {
+      width: 28px; height: 28px;
+      display: grid; grid-template-columns: repeat(5,1fr); gap: 2px;
+    }
+    .nav-logo-glyph span {
+      width: 4px; height: 4px; border-radius: 1px;
+      background: var(--gold);
+    }
+    .nav-links { display: flex; align-items: center; gap: 6px; }
+    .nav-link {
+      font-size: 11px; color: var(--text-muted); text-decoration: none;
+      padding: 5px 10px; border-radius: var(--r-sm);
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface-2); }
+    .btn-tip {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+      color: #000; background: var(--gold);
+      border: none; border-radius: var(--r-sm);
+      padding: 7px 14px; cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-tip:hover { transform: translateY(-1px); box-shadow: 0 4px 20px var(--gold-glow); }
+    .btn-tip:active { transform: translateY(0); }
+
+    /* ─── TIP MODAL ─── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 0.5px solid var(--border-hi);
+      border-radius: var(--r-lg); padding: 32px; max-width: 440px; width: 90%;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+    .eth-box {
+      background: var(--surface-2); border: 0.5px solid var(--border-hi);
+      border-radius: var(--r-md); padding: 14px 16px;
+      font-size: 12px; color: var(--gold); word-break: break-all;
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    }
+    .eth-addr { flex: 1; }
+    .copy-btn {
+      flex-shrink: 0; font-family: var(--font-mono); font-size: 11px;
+      color: #000; background: var(--gold);
+      border: none; border-radius: var(--r-sm); padding: 6px 12px;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .copy-btn:hover { opacity: 0.85; }
+    .modal-note { font-size: 11px; color: var(--text-dim); margin-bottom: 20px; }
+    .modal-close {
+      width: 100%; font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-muted); background: transparent;
+      border: 0.5px solid var(--border); border-radius: var(--r-sm);
+      padding: 10px; cursor: pointer; transition: background 0.2s;
+    }
+    .modal-close:hover { background: var(--surface-2); }
+
+    /* ─── HERO ─── */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-block;
+      font-size: 10px; letter-spacing: 0.2em; font-weight: 400;
+      color: var(--gold); border: 0.5px solid rgba(245,200,66,0.3);
+      padding: 5px 14px; border-radius: 20px;
+      margin-bottom: 28px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(28px, 6vw, 64px);
+      font-weight: 900; line-height: 1.1;
+      letter-spacing: -0.02em; margin-bottom: 16px;
+    }
+    .hero-title .line-2 { color: var(--gold); }
+    .hero-title .line-3 {
+      font-size: 0.45em; font-weight: 300; color: var(--text-muted);
+      display: block; margin-top: 10px; letter-spacing: 0.05em;
+    }
+    .hero-sub {
+      font-size: 13px; color: var(--text-muted);
+      max-width: 500px; margin: 0 auto 40px;
+    }
+    .hero-stats {
+      display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-value {
+      font-family: var(--font-display); font-size: 20px; font-weight: 700;
+      color: var(--gold);
+    }
+    .hero-stat-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; margin-top: 2px; }
+
+    /* ─── SECTION ─── */
+    .section { padding: 70px 0; }
+    .section-label {
+      font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim);
+      margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-label::after { content: ''; flex: 1; height: 0.5px; background: var(--border); }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(18px, 3vw, 28px); font-weight: 700;
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .section-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 40px; }
+
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 24px;
+    }
+    .card-sm { padding: 16px 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    /* ─── FEE SPLIT BLOCKS ─── */
+    .fee-blocks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px; }
+    .fee-block {
+      border-radius: var(--r-md); padding: 18px 16px;
+      border: 0.5px solid;
+    }
+    .fee-block-pct {
+      font-family: var(--font-display); font-size: 28px; font-weight: 900;
+      line-height: 1; margin-bottom: 4px;
+    }
+    .fee-block-label { font-size: 11px; line-height: 1.4; }
+    .fee-block-who { font-size: 10px; margin-top: 4px; opacity: 0.6; }
+
+    .fee-launcher { background: rgba(61,255,192,0.06); border-color: rgba(61,255,192,0.2); color: var(--teal); }
+    .fee-holder   { background: rgba(245,200,66,0.06); border-color: rgba(245,200,66,0.2); color: var(--gold); }
+    .fee-team     { background: rgba(155,127,255,0.06); border-color: rgba(155,127,255,0.2); color: var(--purple); }
+    .fee-pnkstr   { background: rgba(255,107,53,0.06); border-color: rgba(255,107,53,0.2); color: var(--coral); }
+
+    /* ─── CALCULATOR ─── */
+    .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .calc-panel { display: flex; flex-direction: column; gap: 20px; }
+
+    .input-group { display: flex; flex-direction: column; gap: 8px; }
+    .input-label {
+      font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted);
+      display: flex; justify-content: space-between;
+    }
+    .input-val { color: var(--gold); font-weight: 500; }
+
+    input[type="range"] {
+      -webkit-appearance: none; width: 100%; height: 2px;
+      background: var(--surface-3); border-radius: 1px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 14px; height: 14px;
+      border-radius: 50%; background: var(--gold); cursor: pointer;
+      box-shadow: 0 0 8px var(--gold-glow);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%; background: var(--gold);
+      border: none; cursor: pointer;
+    }
+
+    .seg-control {
+      display: flex; gap: 0; border-radius: var(--r-sm);
+      border: 0.5px solid var(--border); overflow: hidden;
+    }
+    .seg-btn {
+      flex: 1; font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-muted); background: transparent;
+      border: none; border-right: 0.5px solid var(--border);
+      padding: 8px 4px; cursor: pointer; transition: all 0.2s;
+    }
+    .seg-btn:last-child { border-right: none; }
+    .seg-btn.active { background: var(--gold); color: #000; font-weight: 500; }
+
+    .result-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    .result-block {
+      background: var(--surface-2); border-radius: var(--r-md); padding: 16px;
+      border: 0.5px solid var(--border);
+      transition: border-color 0.3s;
+    }
+    .result-block.highlight { border-color: rgba(245,200,66,0.4); }
+    .result-block-label { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.08em; }
+    .result-block-value { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1; }
+    .result-block-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .burn-hold-bar { margin-top: 20px; }
+    .bar-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .bar-track {
+      height: 6px; background: var(--surface-3); border-radius: 3px; overflow: hidden;
+    }
+    .bar-fill-hold { height: 100%; background: var(--gold); transition: width 0.4s ease; }
+    .bar-fill-burn { height: 100%; background: var(--coral); transition: width 0.4s ease; }
+
+    .calc-note {
+      font-size: 11px; color: var(--text-dim);
+      background: var(--surface-2); border-left: 2px solid var(--gold);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: 10px 14px; line-height: 1.6;
+    }
+
+    /* ─── CHARTS ─── */
+    .chart-wrap { position: relative; }
+    .chart-title { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.08em; }
+
+    /* ─── LAUNCH GUIDE ─── */
+    .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .guide-card {
+      background: var(--surface); border: 0.5px solid var(--border);
+      border-radius: var(--r-lg); padding: 20px;
+    }
+    .guide-card-header {
+      display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px;
+    }
+    .guide-num {
+      font-family: var(--font-display); font-size: 10px; font-weight: 700;
+      color: var(--gold); background: var(--gold-dim);
+      border-radius: 4px; padding: 4px 8px; flex-shrink: 0;
+    }
+    .guide-card-title { font-size: 13px; font-weight: 500; line-height: 1.4; }
+    .guide-card-body { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+    .antibot-checklist { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .check-item { display: flex; gap: 10px; font-size: 12px; align-items: flex-start; }
+    .check-ico { color: var(--teal); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .check-bad .check-ico { color: var(--coral); }
+
+    /* ─── FUTURE ─── */
+    .timeline { display: flex; flex-direction: column; gap: 0; }
+    .tl-item { display: flex; gap: 24px; padding-bottom: 32px; position: relative; }
+    .tl-item::before {
+      content: ''; position: absolute; left: 20px; top: 40px; bottom: 0;
+      width: 0.5px; background: var(--border);
+    }
+    .tl-item:last-child::before { display: none; }
+    .tl-dot {
+      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    }
+    .tl-dot-1 { background: var(--gold-dim); color: var(--gold); border: 0.5px solid rgba(245,200,66,0.3); }
+    .tl-dot-2 { background: var(--teal-dim); color: var(--teal); border: 0.5px solid rgba(61,255,192,0.3); }
+    .tl-dot-3 { background: var(--coral-dim); color: var(--coral); border: 0.5px solid rgba(255,107,53,0.3); }
+    .tl-dot-4 { background: var(--purple-dim); color: var(--purple); border: 0.5px solid rgba(155,127,255,0.3); }
+    .tl-content { padding-top: 8px; }
+    .tl-phase { font-size: 10px; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 4px; }
+    .tl-title { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+    .tl-body { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+    /* ─── INSIGHTS ─── */
+    .insight-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .chip {
+      font-size: 11px; padding: 5px 12px; border-radius: 20px;
+      border: 0.5px solid;
+    }
+    .chip-gold { border-color: rgba(245,200,66,0.3); color: var(--gold); background: var(--gold-dim); }
+    .chip-teal { border-color: rgba(61,255,192,0.3); color: var(--teal); background: var(--teal-dim); }
+    .chip-coral { border-color: rgba(255,107,53,0.3); color: var(--coral); background: var(--coral-dim); }
+    .chip-purple { border-color: rgba(155,127,255,0.3); color: var(--purple); background: var(--purple-dim); }
+
+    /* ─── DEPLOY ─── */
+    .deploy-steps { display: flex; flex-direction: column; gap: 12px; }
+    .deploy-step { display: flex; gap: 16px; align-items: flex-start; }
+    .step-num {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      background: var(--surface-3); border: 0.5px solid var(--border-hi);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+    }
+    .step-body { flex: 1; padding-top: 4px; }
+    .step-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+    .step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+    .code-block {
+      background: var(--surface-2); border: 0.5px solid var(--border);
+      border-radius: var(--r-sm); padding: 10px 14px;
+      font-size: 11px; color: var(--teal); margin-top: 8px;
+      overflow-x: auto; white-space: pre;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding: 32px 0; margin-top: 40px;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-note { font-size: 11px; color: var(--text-dim); max-width: 480px; line-height: 1.6; }
+    .footer-links { display: flex; gap: 16px; }
+    .footer-link { font-size: 11px; color: var(--text-muted); text-decoration: none; }
+    .footer-link:hover { color: var(--gold); }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 720px) {
+      .calc-grid, .grid-2, .guide-grid { grid-template-columns: 1fr; }
+      .fee-blocks { grid-template-columns: 1fr 1fr; }
+      .result-row { grid-template-columns: 1fr 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .nav-links .nav-link:not(:last-child) { display: none; }
+      .hero { padding: 60px 0 50px; }
+      .hero-stats { gap: 24px; }
+    }
+    @media (max-width: 480px) {
+      .fee-blocks { grid-template-columns: 1fr; }
+      .result-row { grid-template-columns: 1fr; }
+    }
+
+    /* ─── ANIMATE IN ─── */
+    .fade-up {
+      opacity: 0; transform: translateY(20px);
+      animation: fadeUp 0.6s ease forwards;
+    }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+
+    /* ─── PIXEL GLYPH DECO ─── */
+    .pixel-deco {
+      display: inline-grid; grid-template-columns: repeat(5,4px);
+      grid-template-rows: repeat(5,4px); gap: 1px; opacity: 0.5;
+      vertical-align: middle; margin-right: 8px;
+    }
+    .pixel-deco span { border-radius: 0.5px; background: var(--gold); }
+  </style>
+</head>
+<body>
+
+<!-- ORBITAL BACKGROUND -->
+<div class="orbital-bg" aria-hidden="true">
+  <svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+    <circle class="ring ring-1" cx="500" cy="500" r="180" stroke-width="0.8"/>
+    <circle class="ring ring-2" cx="500" cy="500" r="300" stroke-width="0.5"/>
+    <circle class="ring ring-3" cx="500" cy="500" r="440" stroke-width="0.3"/>
+    <!-- Moons ring 1 -->
+    <g class="ring-1">
+      <circle class="moon" cx="500" cy="320" r="4"/>
+      <circle class="moon" cx="680" cy="500" r="3"/>
+      <circle class="moon" cx="500" cy="680" r="5"/>
+    </g>
+    <!-- Moons ring 2 -->
+    <g class="ring-2">
+      <circle class="moon" cx="500" cy="200" r="3"/>
+      <circle class="moon" cx="800" cy="500" r="4"/>
+      <circle class="moon" cx="350" cy="760" r="3"/>
+      <circle class="moon" cx="200" cy="430" r="2"/>
+    </g>
+    <!-- Moons ring 3 -->
+    <g class="ring-3">
+      <circle class="moon" cx="500" cy="60"  r="2"/>
+      <circle class="moon" cx="940" cy="500" r="3"/>
+      <circle class="moon" cx="620" cy="920" r="2"/>
+      <circle class="moon" cx="80"  cy="580" r="2"/>
+    </g>
+    <!-- Central pixel glyph 5x5 -->
+    <g transform="translate(470,470)">
+      <rect x="0"  y="0"  width="8" height="8" rx="1" fill="rgba(245,200,66,0.8)"/>
+      <rect x="12" y="0"  width="8" height="8" rx="1" fill="rgba(245,200,66,0.5)"/>
+      <rect x="24" y="0"  width="8" height="8" rx="1" fill="rgba(245,200,66,0.8)"/>
+      <rect x="0"  y="12" width="8" height="8" rx="1" fill="rgba(245,200,66,0.5)"/>
+      <rect x="12" y="12" width="8" height="8" rx="1" fill="rgba(245,200,66,1.0)"/>
+      <rect x="24" y="12" width="8" height="8" rx="1" fill="rgba(245,200,66,0.5)"/>
+      <rect x="0"  y="24" width="8" height="8" rx="1" fill="rgba(245,200,66,0.8)"/>
+      <rect x="12" y="24" width="8" height="8" rx="1" fill="rgba(245,200,66,0.5)"/>
+      <rect x="24" y="24" width="8" height="8" rx="1" fill="rgba(245,200,66,0.8)"/>
+    </g>
+  </svg>
+</div>
+<div class="glyph-pattern" aria-hidden="true"></div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <div class="nav-logo-glyph" aria-hidden="true">
+          <span></span><span style="opacity:.3"></span><span></span><span style="opacity:.3"></span><span></span>
+          <span style="opacity:.3"></span><span></span><span style="opacity:.6"></span><span></span><span style="opacity:.3"></span>
+          <span></span><span style="opacity:.6"></span><span></span><span style="opacity:.6"></span><span></span>
+          <span style="opacity:.3"></span><span></span><span style="opacity:.6"></span><span></span><span style="opacity:.3"></span>
+          <span></span><span style="opacity:.3"></span><span></span><span style="opacity:.3"></span><span></span>
+        </div>
+        TTT
+      </a>
+      <div class="nav-links">
+        <a href="#calculator" class="nav-link">Calculator</a>
+        <a href="#charts" class="nav-link">Charts</a>
+        <a href="#strategy" class="nav-link">Strategy</a>
+        <a href="#future" class="nav-link">Future</a>
+        <a href="#deploy" class="nav-link">Deploy</a>
+        <button class="btn-tip" onclick="openTip()">⬡ Send a tip</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- TIP MODAL -->
+  <div class="modal-overlay" id="tipModal" onclick="closeTip(event)">
+    <div class="modal">
+      <div class="modal-title">Support this calculator</div>
+      <div class="modal-sub">If this tool helped you model your TTT position, consider sending a tip. Copy the address below and send ETH from any wallet — no minimum, fully optional.</div>
+      <div class="eth-box">
+        <div class="eth-addr" id="ethAddr">0xYOUR_ETH_ADDRESS_HERE</div>
+        <button class="copy-btn" onclick="copyEth()">Copy</button>
+      </div>
+      <div class="modal-note">⚠ Double-check the address in your wallet before confirming. Transactions are irreversible.</div>
+      <button class="modal-close" onclick="document.getElementById('tipModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero container fade-up">
+    <div class="hero-tag">Protocol Analysis · 2026</div>
+    <h1 class="hero-title">
+      Ten Thousand<br>
+      <span class="line-2">Tokens.</span>
+      <span class="line-3">A protocol that rewards the patient.</span>
+    </h1>
+    <p class="hero-sub">
+      Model your earnings as a holder or launcher. Understand the burn-to-launch mechanism.
+      Simulate the ecosystem flywheel with real protocol math.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat fade-up delay-1">
+        <div class="hero-stat-value">10,000</div>
+        <div class="hero-stat-label">MAX SUPPLY · IMMUTABLE</div>
+      </div>
+      <div class="hero-stat fade-up delay-2">
+        <div class="hero-stat-value">0.01Ξ</div>
+        <div class="hero-stat-label">MINT PRICE</div>
+      </div>
+      <div class="hero-stat fade-up delay-3">
+        <div class="hero-stat-value">1%</div>
+        <div class="hero-stat-label">RESTING FEE RATE</div>
+      </div>
+      <div class="hero-stat fade-up delay-4">
+        <div class="hero-stat-value">98</div>
+        <div class="hero-stat-label">BLOCKS TO FAIR PRICE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEE SPLIT OVERVIEW -->
+  <section class="section" id="overview">
+    <div class="container">
+      <div class="section-label">01 · PROTOCOL MECHANICS</div>
+      <h2 class="section-title">How fees flow on every token</h2>
+      <p class="section-sub">Every swap on every launched TTT goes through the Uniswap V4 hook. The 1% resting fee equivalent routes to the FeeSplitter. The decay surplus goes to buyback.</p>
+
+      <div class="fee-blocks">
+        <div class="fee-block fee-launcher">
+          <div class="fee-block-pct">50%</div>
+          <div class="fee-block-label">Launcher (burner)</div>
+          <div class="fee-block-who">50% of their token's fees, forever</div>
+        </div>
+        <div class="fee-block fee-holder">
+          <div class="fee-block-pct">30%</div>
+          <div class="fee-block-label">NFT Holders (unburned)</div>
+          <div class="fee-block-who">Shared pro-rata, all launched tokens</div>
+        </div>
+        <div class="fee-block fee-team">
+          <div class="fee-block-pct">10%</div>
+          <div class="fee-block-label">TokenWorks</div>
+          <div class="fee-block-who">Protocol fee</div>
+        </div>
+        <div class="fee-block fee-pnkstr">
+          <div class="fee-block-pct">10%</div>
+          <div class="fee-block-label">PunkStrategy</div>
+          <div class="fee-block-who">PNKSTR buyback wallet</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--gold);">📐 Fee math — verified</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+            On every buy: hook collects fee in TTT, swaps to ETH.<br>
+            → <span style="color:var(--teal);">1% of swap amount</span> → FeeSplitter (50/30/10/10 split)<br>
+            → <span style="color:var(--coral);">Everything above 1%</span> → buyback reservoir<br>
+            On every sell: flat 1% → FeeSplitter (50/30/10/10 split)<br><br>
+            <strong style="color:var(--text);">Key insight:</strong> the 50/30/10/10 always applies to 1% of volume — regardless of the buy-side decay rate. The decay surplus is separate.
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--gold);">🔄 Buyback loop</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+            Decay surplus (everything above 1% on buys) accumulates in the TTT contract as ETH.<br><br>
+            Anyone can call <code style="color:var(--teal);">TTT.buyback()</code> — up to 1 ETH/block is used to buy back and burn that token. Caller earns 0.5% bounty. This creates a permanent deflationary force proportional to launch excitement.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CALCULATOR -->
+  <section class="section" id="calculator">
+    <div class="container">
+      <div class="section-label">02 · INTERACTIVE CALCULATOR</div>
+      <h2 class="section-title">Model your position</h2>
+      <p class="section-sub">Adjust all parameters. Results update live. All math uses verified protocol spec: 1% of volume routes to FeeSplitter, split 50/30/10/10.</p>
+
+      <div class="card" style="margin-bottom:20px;">
+        <!-- SCENARIO TABS -->
+        <div style="margin-bottom:24px;">
+          <div class="input-label" style="margin-bottom:8px;">SCENARIO</div>
+          <div class="seg-control">
+            <button class="seg-btn active" onclick="setScenario('hold')" id="s-hold">I'm holding</button>
+            <button class="seg-btn" onclick="setScenario('burn')" id="s-burn">I'm burning to launch</button>
+            <button class="seg-btn" onclick="setScenario('both')" id="s-both">Compare both</button>
+          </div>
+        </div>
+
+        <div class="calc-grid">
+          <!-- INPUTS -->
+          <div class="calc-panel">
+            <div class="input-group">
+              <div class="input-label">
+                <span>TOKENS LAUNCHED (NFTs BURNED)</span>
+                <span class="input-val" id="lbl-burned">1</span>
+              </div>
+              <input type="range" id="sl-burned" min="1" max="9999" step="1" value="1" oninput="syncCalc()">
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);">
+                <span>1</span><span>2,500</span><span>5,000</span><span>7,500</span><span>9,999</span>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <div class="input-label">
+                <span>AVG VOLUME PER TOKEN (USD)</span>
+                <span class="input-val" id="lbl-vol">$500,000</span>
+              </div>
+              <input type="range" id="sl-vol" min="0" max="20000000" step="50000" value="500000" oninput="syncCalc()">
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);">
+                <span>$0</span><span>$5M</span><span>$10M</span><span>$15M</span><span>$20M</span>
+              </div>
+            </div>
+
+            <div class="input-group" id="mytoken-group" style="display:none;">
+              <div class="input-label">
+                <span>MY TOKEN'S VOLUME (USD)</span>
+                <span class="input-val" id="lbl-myvol">$1,000,000</span>
+              </div>
+              <input type="range" id="sl-myvol" min="0" max="20000000" step="50000" value="1000000" oninput="syncCalc()">
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);">
+                <span>$0</span><span>$5M</span><span>$10M</span><span>$15M</span><span>$20M</span>
+              </div>
+            </div>
+
+            <!-- Quick presets -->
+            <div>
+              <div class="input-label" style="margin-bottom:8px;">QUICK PRESETS</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <button class="seg-btn" style="flex:none;padding:5px 10px;font-size:10px;" onclick="setPreset(1,1000000)">1 token · $1M</button>
+                <button class="seg-btn" style="flex:none;padding:5px 10px;font-size:10px;" onclick="setPreset(100,1000000)">100 · $1M</button>
+                <button class="seg-btn" style="flex:none;padding:5px 10px;font-size:10px;" onclick="setPreset(1000,5000000)">1K · $5M</button>
+                <button class="seg-btn" style="flex:none;padding:5px 10px;font-size:10px;" onclick="setPreset(5000,2000000)">5K · $2M</button>
+                <button class="seg-btn" style="flex:none;padding:5px 10px;font-size:10px;" onclick="setPreset(9000,1000000)">9K · $1M</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULTS -->
+          <div class="calc-panel">
+            <div class="result-row" id="results-hold">
+              <div class="result-block highlight">
+                <div class="result-block-label">TOTAL HOLDER POOL</div>
+                <div class="result-block-value" style="color:var(--gold);" id="r-pool">$0</div>
+                <div class="result-block-sub">30% of all ecosystem fees</div>
+              </div>
+              <div class="result-block highlight">
+                <div class="result-block-label">YOUR SHARE (1 NFT)</div>
+                <div class="result-block-value" style="color:var(--gold);" id="r-per">$0</div>
+                <div class="result-block-sub" id="r-pct">0.0001% of pool</div>
+              </div>
+              <div class="result-block">
+                <div class="result-block-label">REMAINING HOLDERS</div>
+                <div class="result-block-value" style="color:var(--text-muted);" id="r-holders">9,999</div>
+                <div class="result-block-sub">NFTs not yet burned</div>
+              </div>
+              <div class="result-block">
+                <div class="result-block-label">TOTAL ECOSYSTEM FEES</div>
+                <div class="result-block-value" style="color:var(--teal);" id="r-total">$0</div>
+                <div class="result-block-sub">1% of total volume</div>
+              </div>
+              <div class="result-block">
+                <div class="result-block-label">TOTAL VOLUME</div>
+                <div class="result-block-value" style="color:var(--text-muted);" id="r-tvol">$0</div>
+                <div class="result-block-sub">all launched tokens</div>
+              </div>
+              <div class="result-block">
+                <div class="result-block-label">TEAM + PNKSTR TAKE</div>
+                <div class="result-block-value" style="color:var(--purple);" id="r-team">$0</div>
+                <div class="result-block-sub">20% of fees</div>
+              </div>
+            </div>
+
+            <div id="results-burn" style="display:none;">
+              <div class="result-row">
+                <div class="result-block highlight">
+                  <div class="result-block-label">LAUNCHER EARNINGS</div>
+                  <div class="result-block-value" style="color:var(--teal);" id="r-launch">$0</div>
+                  <div class="result-block-sub">50% of your token's fees</div>
+                </div>
+                <div class="result-block">
+                  <div class="result-block-label">YOUR TOKEN'S FEES</div>
+                  <div class="result-block-value" style="color:var(--text-muted);" id="r-myfees">$0</div>
+                  <div class="result-block-sub">1% of your token's volume</div>
+                </div>
+                <div class="result-block">
+                  <div class="result-block-label">SACRIFICED (HOLD)</div>
+                  <div class="result-block-value" style="color:var(--coral);" id="r-sacr">$0</div>
+                  <div class="result-block-sub">you'd have earned as holder</div>
+                </div>
+              </div>
+              <div class="burn-hold-bar" style="margin-top:16px;">
+                <div class="bar-label"><span style="color:var(--teal);">BURN earnings</span><span style="color:var(--gold);">HOLD earnings</span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <div class="bar-track"><div class="bar-fill-burn" id="bar-burn" style="width:50%;background:var(--teal);"></div></div>
+                  <div class="bar-track"><div class="bar-fill-hold" id="bar-hold" style="width:50%;"></div></div>
+                </div>
+                <div class="bar-label" style="margin-top:4px;"><span id="burn-wins" style="color:var(--teal);font-size:11px;"></span></div>
+              </div>
+            </div>
+
+            <div id="results-both" style="display:none;">
+              <div class="result-row">
+                <div class="result-block">
+                  <div class="result-block-label">IF YOU HOLD</div>
+                  <div class="result-block-value" style="color:var(--gold);" id="r-hold-both">$0</div>
+                  <div class="result-block-sub">per NFT from 30% pool</div>
+                </div>
+                <div class="result-block">
+                  <div class="result-block-label">IF YOU BURN</div>
+                  <div class="result-block-value" style="color:var(--teal);" id="r-burn-both">$0</div>
+                  <div class="result-block-sub">50% of your token's fees</div>
+                </div>
+                <div class="result-block highlight">
+                  <div class="result-block-label">VERDICT</div>
+                  <div class="result-block-value" style="font-size:14px;" id="r-verdict">—</div>
+                  <div class="result-block-sub" id="r-verdict-sub"></div>
+                </div>
+              </div>
+              <div style="margin-top:12px;font-size:11px;color:var(--text-dim);">
+                Break-even: your token needs
+                <span style="color:var(--gold);" id="r-breakeven">—</span>
+                volume to match holding.
+              </div>
+            </div>
+
+            <div class="calc-note" id="calc-note">
+              Loading...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section class="section" id="charts">
+    <div class="container">
+      <div class="section-label">03 · LIVE CHARTS</div>
+      <h2 class="section-title">Visualizing the protocol dynamics</h2>
+      <p class="section-sub">All charts update as you adjust the calculator sliders above.</p>
+
+      <div class="grid-2" style="margin-bottom:20px;">
+        <!-- Supply Compression -->
+        <div class="card">
+          <div class="chart-title">SUPPLY COMPRESSION — PER HOLDER SHARE vs BURNS</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="supplyChart" role="img" aria-label="Supply compression chart showing per-holder share rising as more NFTs are burned"></canvas>
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">As burns increase: fewer holders → each holder owns a larger slice of the 30% pool. The orange dot marks your current slider position.</div>
+        </div>
+
+        <!-- Decay Tax -->
+        <div class="card">
+          <div class="chart-title">BUY-SIDE DECAY TAX — FEE % PER BLOCK</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="decayChart" role="img" aria-label="Decay tax chart showing buy fee dropping from 99% at block 0 to 1% at block 98"></canvas>
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">Block 0 = 99% fee. Every block −1%. Block 98+ = 1% resting fee forever. Decay surplus → buyback reservoir (not to FeeSplitter).</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Holder earnings projection -->
+        <div class="card">
+          <div class="chart-title">HOLDER EARNINGS PROJECTION — TOKENS LAUNCHED vs EARNINGS/NFT</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="earningsChart" role="img" aria-label="Projected per-NFT earnings as more tokens are launched at current volume setting"></canvas>
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">Assumes avg volume per token = your slider. The curve bends as holders decrease. Compounding flywheel: more burns → more volume → more fees → higher per-holder share.</div>
+        </div>
+
+        <!-- Fee destination breakdown -->
+        <div class="card">
+          <div class="chart-title">FEE DISTRIBUTION BREAKDOWN — CURRENT SCENARIO</div>
+          <div class="chart-wrap" style="height:220px;">
+            <canvas id="pieChart" role="img" aria-label="Pie chart showing how ecosystem fees are distributed across launcher, holders, team, and buyback"></canvas>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;">
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#3DFFC0;display:inline-block;"></span>Launchers 50%</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F5C842;display:inline-block;"></span>Holders 30%</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#9B7FFF;display:inline-block;"></span>Team 10%</span>
+            <span style="font-size:11px;display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#FF6B35;display:inline-block;"></span>PNKSTR 10%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STRATEGY GUIDE -->
+  <section class="section" id="strategy">
+    <div class="container">
+      <div class="section-label">04 · LAUNCH STRATEGY</div>
+      <h2 class="section-title">How to launch a token that survives</h2>
+      <p class="section-sub">The protocol is permissionless — quality of launch is entirely on the burner. These are the patterns that work.</p>
+
+      <div class="guide-grid" style="margin-bottom:20px;">
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-num">01</div>
+            <div class="guide-card-title">Time your entry — block awareness</div>
+          </div>
+          <div class="guide-card-body">
+            The decay tax starts at 99% at block 0. Your community needs to know: <strong style="color:var(--text);">do not buy at launch block.</strong> Announce the block number in advance. Tell followers to wait until block 49 (50% fee) or ideally block 98+ (1% fee). Early buyers pay enormous fees — most go to buyback, benefiting the token long-term, but they're not getting value. Patience is the protocol's core design principle.
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-num">02</div>
+            <div class="guide-card-title">Build community before burning</div>
+          </div>
+          <div class="guide-card-body">
+            The protocol cannot manufacture volume. You must. Have a ready community before you execute <code style="color:var(--teal);">burnAndLaunch()</code>. Announce 24–48h ahead, build a Twitter/Farcaster thread explaining your token's purpose, get people excited. Dead launches stay dead — there's no re-initialize path. The NFT burns once, the pool opens once.
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-num">03</div>
+            <div class="guide-card-title">Differentiate your token narrative</div>
+          </div>
+          <div class="guide-card-body">
+            With up to 10,000 tokens, attention dilution is real. Your token's name, symbol, and imageURI (committed permanently at burn time) must be distinctive. Think: what niche does this token own? Meme tokens need virality. Concept tokens need a clear thesis. Generic names compete with everything and win nothing. The ticker is your first impression and it's immutable.
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-num">04</div>
+            <div class="guide-card-title">Liquidity is locked — use this as a trust signal</div>
+          </div>
+          <div class="guide-card-body">
+            The protocol hard-codes: all 1B token supply + 1 wei ETH goes to a burn-address liquidity position on Uniswap V4. No founder can rug the liquidity. Use this prominently in marketing — "liquidity is permanently locked by protocol, not by promise." This removes one of the biggest barriers to early buyers.
+          </div>
+        </div>
+      </div>
+
+      <!-- Anti-bot checklist -->
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:16px;color:var(--teal);">Anti-bot protocol — what the protocol does, and what you must do</div>
+        <div class="grid-2">
+          <div>
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;letter-spacing:0.1em;">PROTOCOL-LEVEL PROTECTIONS (automatic)</div>
+            <div class="antibot-checklist">
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>99% buy fee at block 0 — MEV bots that snipe at launch pay 99%, almost entirely to buyback. They can't profit.</span>
+              </div>
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>Hardcoded starting price — no founder can set an artificially high initial valuation. Every launch starts equal.</span>
+              </div>
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>Block-based decay — purely deterministic, no oracle, no governance. Bots cannot game the curve.</span>
+              </div>
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>Locked liquidity — no drain attack, no honeypot. The pool is permanent and permissionless.</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;letter-spacing:0.1em;">YOUR RESPONSIBILITY AS LAUNCHER</div>
+            <div class="antibot-checklist">
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>Tell your community the exact block you'll burn. Let humans prepare. Do not keep it secret.</span>
+              </div>
+              <div class="check-item">
+                <span class="check-ico">✓</span>
+                <span>Do not tip block builders or use private RPCs to hide the burn transaction — this undermines fair launch.</span>
+              </div>
+              <div class="check-item check-bad">
+                <span class="check-ico">✗</span>
+                <span>Don't tell anyone to buy at block 0–10. Those fees are 90%+ and go to buyback, not to buyers.</span>
+              </div>
+              <div class="check-item check-bad">
+                <span class="check-ico">✗</span>
+                <span>Don't promise a specific token price — the protocol explicitly forbids this. Manage expectations correctly.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FUTURE INSIGHTS -->
+  <section class="section" id="future">
+    <div class="container">
+      <div class="section-label">05 · FUTURE SCENARIOS</div>
+      <h2 class="section-title">What the protocol could become</h2>
+      <p class="section-sub">These are analytical projections based on protocol mechanics, not promises or investment advice.</p>
+
+      <div class="grid-2" style="margin-bottom:24px;">
+        <div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-1">P1</div>
+              <div class="tl-content">
+                <div class="tl-phase">PHASE 1 · FIRST 500 BURNS</div>
+                <div class="tl-title">Discovery &amp; price formation</div>
+                <div class="tl-body">Early burners set the quality bar. 1–3 breakout tokens generate most volume. Holder pool earns modestly. NFT floor price rises if early tokens perform — the fee stream becomes visible and valuable.</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-2">P2</div>
+              <div class="tl-content">
+                <div class="tl-phase">PHASE 2 · 500–3,000 BURNS</div>
+                <div class="tl-title">Flywheel or silence</div>
+                <div class="tl-body">If early tokens traded well, remaining NFT holders see meaningful fee streams. This makes NFTs more valuable on secondary. New buyers enter → holdback pressure increases → burns slow → existing holders' share per NFT grows further.</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-3">P3</div>
+              <div class="tl-content">
+                <div class="tl-phase">PHASE 3 · 3,000–8,000 BURNS</div>
+                <div class="tl-title">Supply compression peak</div>
+                <div class="tl-body">With 2,000–7,000 holders and hundreds of active tokens, per-holder earnings could be significant. Supply scarcity meets growing fee volume. The "patient holder" thesis either validates or fails here.</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot tl-dot-4">P4</div>
+              <div class="tl-content">
+                <div class="tl-phase">PHASE 4 · ENDGAME</div>
+                <div class="tl-title">Last holders vs. all launchers</div>
+                <div class="tl-body">If &lt;500 NFTs remain unburned but 9,500+ tokens are trading, each remaining holder receives an outsized share of ecosystem fees. This is the extreme supply compression scenario — the patient few rewarded by the many.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--gold);">Bullish scenarios</div>
+            <div class="insight-chips">
+              <span class="chip chip-gold">NFT floor rises with fee stream</span>
+              <span class="chip chip-teal">Breakout token drives 8-figure vol</span>
+              <span class="chip chip-teal">Supply compression = 10x per-holder share</span>
+              <span class="chip chip-gold">Buyback creates price floors on TTTs</span>
+              <span class="chip chip-teal">Secondary market for unburned NFTs</span>
+              <span class="chip chip-gold">Cross-token arbitrage drives volume</span>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--coral);">Risk scenarios</div>
+            <div class="insight-chips">
+              <span class="chip chip-coral">Mint doesn't sell out → no unlock</span>
+              <span class="chip chip-coral">Zero volume tokens dominate launches</span>
+              <span class="chip chip-coral">Attention diluted across 1000s of tokens</span>
+              <span class="chip chip-purple">Regulatory classification of fee NFTs</span>
+              <span class="chip chip-coral">Hook vulnerability (shared across all pools)</span>
+              <span class="chip chip-purple">ETH gas costs erode small holder gains</span>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:500;margin-bottom:12px;color:var(--purple);">Meta-level dynamics</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">
+              The 10,000 cap is the protocol's most powerful property. It solves the "too-many-tokens" coordination failure by making the launch universe finite. Every token launched here is structurally comparable — same starting price, same liquidity, same fee curve. This is the anti-Pump.fun: a curated issuance universe with built-in economic alignment between launchers and holders.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional features / what's possible -->
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:16px;color:var(--teal);">Protocol features worth knowing</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:500;">MasterChef accrual</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">Holder fees accumulate continuously and can be claimed at any time. No lockups, no vesting. Burn-time settlement pays accrued fees before destroying the NFT.</div>
+          </div>
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--teal);margin-bottom:6px;font-weight:500;">Permissionless buyback</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">Anyone can trigger <code style="color:var(--teal)">buyback()</code> on any token. Up to 1 ETH/block drawn from reservoir. Caller earns 0.5% bounty — a MEV opportunity aligned with token health.</div>
+          </div>
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--purple);margin-bottom:6px;font-weight:500;">On-chain rendering</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">All 10,000 NFTs render entirely on-chain from a 65-entry sine lookup table. No IPFS, no Arweave. The NFT exists as long as Ethereum does.</div>
+          </div>
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--coral);margin-bottom:6px;font-weight:500;">Soulbound until sellout</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">NFTs cannot be transferred until all 10,000 mint. This forces coordination — everyone needs the mint to succeed. No early exits, no flippers during mint.</div>
+          </div>
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--gold);margin-bottom:6px;font-weight:500;">Refund safety net</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">If mint fails (doesn't sell out), paid minters get a full 0.01Ξ refund via burnAndRefund(). Free claimants from S02 soulbounds are non-refundable by design.</div>
+          </div>
+          <div style="padding:14px;background:var(--surface-2);border-radius:var(--r-md);border:0.5px solid var(--border);">
+            <div style="font-size:11px;color:var(--teal);margin-bottom:6px;font-weight:500;">Shared hook architecture</div>
+            <div style="font-size:11px;color:var(--teal);line-height:1.6;">One Uniswap V4 hook manages all 10,000 pools. Every launched token shares the same fee curve, same decay schedule, same governance — true equality of launch conditions.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEPLOY GUIDE -->
+  <section class="section" id="deploy">
+    <div class="container">
+      <div class="section-label">06 · DEPLOY THIS CALCULATOR</div>
+      <h2 class="section-title">GitHub → Vercel in 5 minutes</h2>
+      <p class="section-sub">This is a static site — pure HTML/CSS/JS. Vercel's edge network handles unlimited traffic. No backend, no database, no server costs.</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-size:12px;font-weight:500;color:var(--gold);margin-bottom:20px;">Step-by-step deployment</div>
+          <div class="deploy-steps">
+            <div class="deploy-step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <div class="step-title">Set your ETH address</div>
+                <div class="step-desc">Open <code style="color:var(--teal)">index.html</code>, find <code style="color:var(--teal)">0xYOUR_ETH_ADDRESS_HERE</code> and replace with your actual Ethereum address. Save the file.</div>
+              </div>
+            </div>
+            <div class="deploy-step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <div class="step-title">Create a GitHub repository</div>
+                <div class="step-desc">Go to github.com → New repository → name it <code style="color:var(--teal)">ttt-calculator</code> → Public → Create.</div>
+              </div>
+            </div>
+            <div class="deploy-step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <div class="step-title">Push your files</div>
+                <div class="code-block">git init
+git add index.html
+git commit -m "init: TTT calculator"
+git remote add origin https://github.com/YOUR_USER/ttt-calculator.git
+git push -u origin main</div>
+              </div>
+            </div>
+            <div class="deploy-step">
+              <div class="step-num">4</div>
+              <div class="step-body">
+                <div class="step-title">Deploy on Vercel</div>
+                <div class="step-desc">Go to vercel.com → Add New Project → Import your GitHub repo → Framework: <strong style="color:var(--text);">Other</strong> → Root Directory: <code style="color:var(--teal)">./</code> → Deploy. Vercel auto-detects the static HTML.</div>
+              </div>
+            </div>
+            <div class="deploy-step">
+              <div class="step-num">5</div>
+              <div class="step-body">
+                <div class="step-title">Custom domain (optional)</div>
+                <div class="step-desc">In Vercel → Project Settings → Domains → Add your domain. Add a CNAME record pointing to <code style="color:var(--teal)">cname.vercel-dns.com</code> in your DNS provider. Auto HTTPS included.</div>
+              </div>
+            </div>
+            <div class="deploy-step">
+              <div class="step-num">6</div>
+              <div class="step-body">
+                <div class="step-title">Future updates</div>
+                <div class="step-desc">Any push to the <code style="color:var(--teal)">main</code> branch auto-deploys. Preview URLs generated for every PR branch. Zero downtime deploys. Vercel's CDN caches globally — handles millions of requests with zero config.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="card">
+            <div style="font-size:12px;font-weight:500;color:var(--teal);margin-bottom:12px;">Why this won't go down under traffic</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+              <strong style="color:var(--text);">Pure static.</strong> No server processes, no database queries, no Node.js runtime. Every user gets the same pre-built HTML from Vercel's global CDN — 100+ edge nodes worldwide.<br><br>
+              <strong style="color:var(--text);">Chart.js from cdnjs.</strong> Cloudflare's CDN handles the JS library. Even if 50,000 users hit simultaneously, your Vercel site has no bottleneck.<br><br>
+              <strong style="color:var(--text);">Google Fonts via CDN.</strong> Fonts load from Google's global network — never from your domain.<br><br>
+              <strong style="color:var(--text);">Vercel free tier handles</strong> 100GB bandwidth/month. Paid tier is effectively unlimited.
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-size:12px;font-weight:500;color:var(--gold);margin-bottom:12px;">Add a vercel.json for hardening</div>
+            <div class="code-block">{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public,max-age=3600,s-maxage=86400"
+        }
+      ]
+    }
+  ]
+}</div>
+          </div>
+          <div class="card card-sm">
+            <div style="font-size:12px;font-weight:500;color:var(--purple);margin-bottom:6px;">Optional: analytics without backend</div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">Add Vercel Analytics (free) with one script tag, or Plausible.io for privacy-first visitor tracking. No server required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-note">
+        This calculator is an independent analytical tool using publicly documented protocol mathematics from the Ten Thousand Tokens whitepaper. Not financial advice. Protocol interactions are irreversible — always verify on-chain.
+      </div>
+      <div class="footer-links">
+        <a href="https://www.tenthousandtokens.net" class="footer-link" target="_blank" rel="noopener">Protocol site</a>
+        <a href="https://www.token.works/ten-thousand-tokens-whitepaper.html" class="footer-link" target="_blank" rel="noopener">Whitepaper</a>
+        <button class="footer-link" style="background:none;border:none;cursor:pointer;font-family:var(--font-mono);" onclick="openTip()">Tip jar ⬡</button>
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /page -->
+
+<!-- CHART.JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  /* ─── STATE ─── */
+  let scenario = 'hold';
+
+  /* ─── FORMAT HELPERS ─── */
+  function fmtUSD(v) {
+    if (v >= 1e9)  return '$' + (v/1e9).toFixed(2)  + 'B';
+    if (v >= 1e6)  return '$' + (v/1e6).toFixed(2)  + 'M';
+    if (v >= 1e3)  return '$' + (v/1e3).toFixed(1)  + 'K';
+    if (v < 0.01 && v > 0) return '<$0.01';
+    return '$' + v.toFixed(2);
+  }
+  function fmtNum(v) { return v.toLocaleString('en-US'); }
+  function fmtPct(v) { return v.toFixed(4) + '%'; }
+
+  /* ─── SCENARIO SWITCH ─── */
+  function setScenario(s) {
+    scenario = s;
+    ['hold','burn','both'].forEach(x => document.getElementById('s-'+x).classList.remove('active'));
+    document.getElementById('s-'+s).classList.add('active');
+    document.getElementById('results-hold').style.display = s === 'hold' ? '' : 'none';
+    document.getElementById('results-burn').style.display = s === 'burn' ? '' : 'none';
+    document.getElementById('results-both').style.display = s === 'both' ? '' : 'none';
+    document.getElementById('mytoken-group').style.display = (s === 'burn' || s === 'both') ? '' : 'none';
+    syncCalc();
+  }
+
+  /* ─── PRESET ─── */
+  function setPreset(burned, vol) {
+    document.getElementById('sl-burned').value = burned;
+    document.getElementById('sl-vol').value    = vol;
+    syncCalc();
+  }
+
+  /* ─── CORE CALCULATION ─── */
+  /*
+    Verified fee math (per whitepaper §8-9):
+    - Resting fee = 1% (both buys at block 98+ and all sells)
+    - FeeSplitter receives exactly 1% of swap amount (ETH equivalent)
+    - Decay surplus (99%→1% over 98 blocks) → buyback reservoir (separate)
+    - FeeSplitter split: 50% launcher / 30% holders / 10% TeamWorks / 10% PNKSTR
+    - Holder pool is SHARED across ALL launched tokens, pro-rata per NFT
+  */
+  function calcCore() {
+    const burned    = parseInt(document.getElementById('sl-burned').value);
+    const avgVol    = parseFloat(document.getElementById('sl-vol').value);
+    const myVol     = parseFloat(document.getElementById('sl-myvol').value || 0);
+    const holders   = Math.max(1, 10000 - burned);
+    const totalVol  = burned * avgVol;                 // total ecosystem volume
+    const totalFees = totalVol * 0.01;                 // 1% fee rate → FeeSplitter
+    const holderPool    = totalFees * 0.30;
+    const launchersPool = totalFees * 0.50;
+    const teamTake      = totalFees * 0.20;
+    const perHolder     = holderPool / holders;
+    const perLauncher   = (burned > 0) ? launchersPool / burned : 0; // avg across launchers
+    const myFees        = myVol * 0.01;
+    const myLaunch      = myFees * 0.50;
+    // Break-even: myLaunch = perHolder  → myVol * 0.005 = perHolder → myVol_needed = perHolder / 0.005
+    const breakEven     = perHolder / 0.005;
+    const holderPct     = 100 / holders;
+    return { burned, avgVol, myVol, holders, totalVol, totalFees, holderPool,
+             launchersPool, teamTake, perHolder, perLauncher, myFees, myLaunch,
+             breakEven, holderPct };
+  }
+
+  /* ─── SYNC UI ─── */
+  function syncCalc() {
+    const d = calcCore();
+
+    /* Label updates */
+    document.getElementById('lbl-burned').textContent = fmtNum(d.burned);
+    document.getElementById('lbl-vol').textContent    = fmtUSD(d.avgVol);
+    document.getElementById('lbl-myvol').textContent  = fmtUSD(d.myVol);
+
+    /* HOLD results */
+    document.getElementById('r-pool').textContent    = fmtUSD(d.holderPool);
+    document.getElementById('r-per').textContent     = fmtUSD(d.perHolder);
+    document.getElementById('r-pct').textContent     = fmtPct(d.holderPct) + ' of pool';
+    document.getElementById('r-holders').textContent = fmtNum(d.holders);
+    document.getElementById('r-total').textContent   = fmtUSD(d.totalFees);
+    document.getElementById('r-tvol').textContent    = fmtUSD(d.totalVol);
+    document.getElementById('r-team').textContent    = fmtUSD(d.teamTake);
+
+    /* BURN results */
+    document.getElementById('r-launch').textContent  = fmtUSD(d.myLaunch);
+    document.getElementById('r-myfees').textContent  = fmtUSD(d.myFees);
+    document.getElementById('r-sacr').textContent    = fmtUSD(d.perHolder);
+    /* burn vs hold bar */
+    const maxBar = Math.max(d.myLaunch, d.perHolder, 1);
+    const burnW  = Math.min(100, (d.myLaunch / maxBar) * 100);
+    const holdW  = Math.min(100, (d.perHolder / maxBar) * 100);
+    document.getElementById('bar-burn').style.width = burnW.toFixed(1) + '%';
+    document.getElementById('bar-hold').style.width = holdW.toFixed(1) + '%';
+    document.getElementById('burn-wins').textContent = d.myLaunch > d.perHolder
+      ? `Burning wins by ${fmtUSD(d.myLaunch - d.perHolder)}`
+      : d.perHolder > d.myLaunch
+        ? `Holding wins by ${fmtUSD(d.perHolder - d.myLaunch)}`
+        : 'Break-even';
+
+    /* BOTH results */
+    document.getElementById('r-hold-both').textContent  = fmtUSD(d.perHolder);
+    document.getElementById('r-burn-both').textContent  = fmtUSD(d.myLaunch);
+    const verdict = d.myLaunch > d.perHolder ? 'Burn 🔥' : 'Hold 🟡';
+    const vStyle  = d.myLaunch > d.perHolder ? 'var(--teal)' : 'var(--gold)';
+    document.getElementById('r-verdict').textContent      = verdict;
+    document.getElementById('r-verdict').style.color      = vStyle;
+    document.getElementById('r-verdict-sub').textContent  = d.myLaunch > d.perHolder
+      ? 'Burning yields more if your token performs'
+      : 'Holding yields more at current avg volume';
+    document.getElementById('r-breakeven').textContent  = fmtUSD(d.breakEven);
+
+    /* Note */
+    const noteMap = {
+      hold: `${fmtNum(d.burned)} token(s) launched, ${fmtNum(d.holders)} holders sharing the 30% pool. Total ecosystem volume: ${fmtUSD(d.totalVol)}. Each holder earns ${fmtUSD(d.perHolder)} from the shared pool.`,
+      burn: `If your token does ${fmtUSD(d.myVol)} volume, you earn ${fmtUSD(d.myLaunch)} as launcher (50% of ${fmtUSD(d.myFees)} fees). Meanwhile, as a holder you'd earn ${fmtUSD(d.perHolder)}. Your token needs ${fmtUSD(d.breakEven)} volume for burn to beat hold.`,
+      both: `Break-even volume for your token: ${fmtUSD(d.breakEven)}. Below this, holding is more profitable. Above it, burning wins. Current avg token volume is ${fmtUSD(d.avgVol)}.`
+    };
+    document.getElementById('calc-note').textContent = noteMap[scenario];
+
+    /* Update supply chart marker */
+    updateSupplyMarker(d.burned);
+    updateEarningsChart(d.avgVol);
+  }
+
+  /* ─── CHART: DECAY TAX ─── */
+  const decayBlocks = Array.from({length:110}, (_,i) => i);
+  const decayBuy    = decayBlocks.map(b => b < 98 ? 99 - b : 1);
+  const decaySell   = decayBlocks.map(() => 1);
+  const decayCtx    = document.getElementById('decayChart').getContext('2d');
+  const decayChart  = new Chart(decayCtx, {
+    type: 'line',
+    data: {
+      labels: decayBlocks,
+      datasets: [
+        {
+          label: 'Buy fee %',
+          data: decayBuy,
+          borderColor: '#FF6B35',
+          backgroundColor: 'rgba(255,107,53,0.08)',
+          fill: true, pointRadius: 0, borderWidth: 2, tension: 0
+        },
+        {
+          label: 'Sell fee (flat 1%)',
+          data: decaySell,
+          borderColor: '#3DFFC0',
+          backgroundColor: 'transparent',
+          pointRadius: 0, borderWidth: 1.5, borderDash: [5,4]
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + c.parsed.y + '%' } } },
+      scales: {
+        x: { title: { display: true, text: 'Block', color: '#7A7670', font: { size: 10, family: "'IBM Plex Mono'" } }, ticks: { color: '#3A3935', maxTicksLimit: 8, font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { title: { display: true, text: 'Fee %', color: '#7A7670', font: { size: 10 } }, min: 0, max: 100, ticks: { color: '#3A3935', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  /* ─── CHART: SUPPLY COMPRESSION ─── */
+  const supplyPoints = [0,500,1000,1500,2000,3000,4000,5000,6000,7000,8000,8500,9000,9500,9800,9999];
+  const supplyShare  = supplyPoints.map(b => parseFloat((100 / Math.max(1, 10000-b)).toFixed(6)));
+  const supplyCtx    = document.getElementById('supplyChart').getContext('2d');
+  const supplyChart  = new Chart(supplyCtx, {
+    type: 'line',
+    data: {
+      labels: supplyPoints.map(b => b >= 1000 ? (b/1000).toFixed(1)+'K' : b+''),
+      datasets: [
+        {
+          label: 'Your share %',
+          data: supplyShare,
+          borderColor: '#F5C842',
+          backgroundColor: 'rgba(245,200,66,0.07)',
+          fill: true, pointRadius: 0, borderWidth: 2, tension: 0.3
+        },
+        {
+          label: 'Current position',
+          data: [null],
+          borderColor: '#FF6B35',
+          backgroundColor: '#FF6B35',
+          pointRadius: 6, pointStyle: 'circle',
+          type: 'scatter', showLine: false
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => c.datasetIndex === 0 ? 'Share: ' + c.parsed.y.toFixed(5) + '%' : 'Current: ' + c.parsed.x + ' burned'
+      }}},
+      scales: {
+        x: { title: { display: true, text: 'Burns', color: '#7A7670', font: { size: 10 } }, ticks: { color: '#3A3935', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { title: { display: true, text: '% of pool', color: '#7A7670', font: { size: 10 } }, ticks: { color: '#3A3935', font: { size: 10 }, callback: v => v.toFixed(3) + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  function updateSupplyMarker(burned) {
+    const share = 100 / Math.max(1, 10000 - burned);
+    /* find nearest index in supplyPoints */
+    let nearest = 0;
+    supplyPoints.forEach((v, i) => { if (Math.abs(v - burned) < Math.abs(supplyPoints[nearest] - burned)) nearest = i; });
+    supplyChart.data.datasets[1].data = [{ x: nearest, y: parseFloat(share.toFixed(6)) }];
+    supplyChart.update('none');
+  }
+
+  /* ─── CHART: HOLDER EARNINGS PROJECTION ─── */
+  const earningsCtx   = document.getElementById('earningsChart').getContext('2d');
+  const earningsChart = new Chart(earningsCtx, {
+    type: 'line',
+    data: {
+      labels: supplyPoints.map(b => b >= 1000 ? (b/1000).toFixed(1)+'K' : b+''),
+      datasets: [{
+        label: 'Per-holder earnings',
+        data: supplyPoints.map(b => {
+          const h = Math.max(1, 10000-b);
+          return parseFloat(((b * 500000 * 0.01 * 0.30) / h).toFixed(2));
+        }),
+        borderColor: '#9B7FFF',
+        backgroundColor: 'rgba(155,127,255,0.08)',
+        fill: true, pointRadius: 0, borderWidth: 2, tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: c => 'Per NFT: $' + c.parsed.y.toFixed(2)
+      }}},
+      scales: {
+        x: { title: { display: true, text: 'Burns', color: '#7A7670', font: { size: 10 } }, ticks: { color: '#3A3935', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { title: { display: true, text: 'USD per NFT', color: '#7A7670', font: { size: 10 } }, ticks: { color: '#3A3935', font: { size: 10 }, callback: v => '$' + (v >= 1000 ? (v/1000).toFixed(0)+'K' : v.toFixed(0)) }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  function updateEarningsChart(avgVol) {
+    earningsChart.data.datasets[0].data = supplyPoints.map(b => {
+      const h = Math.max(1, 10000-b);
+      return parseFloat(((b * avgVol * 0.01 * 0.30) / h).toFixed(2));
+    });
+    earningsChart.update('none');
+  }
+
+  /* ─── CHART: PIE ─── */
+  const pieCtx   = document.getElementById('pieChart').getContext('2d');
+  const pieChart = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Launchers (50%)', 'Holders (30%)', 'TeamWorks (10%)', 'PNKSTR (10%)'],
+      datasets: [{
+        data: [50, 30, 10, 10],
+        backgroundColor: ['#3DFFC0', '#F5C842', '#9B7FFF', '#FF6B35'],
+        borderColor: '#030306',
+        borderWidth: 3,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.label + ': ' + c.raw + '%' } }
+      }
+    }
+  });
+
+  /* ─── TIP MODAL ─── */
+  function openTip() { document.getElementById('tipModal').classList.add('open'); }
+  function closeTip(e) { if (e.target === document.getElementById('tipModal')) document.getElementById('tipModal').classList.remove('open'); }
+
+  function copyEth() {
+    const addr = document.getElementById('ethAddr').textContent.trim();
+    navigator.clipboard.writeText(addr).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1800);
+    }).catch(() => {
+      /* fallback */
+      const r = document.createRange();
+      r.selectNode(document.getElementById('ethAddr'));
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(r);
+    });
+  }
+
+  /* ─── INIT ─── */
+  setScenario('hold');
+</script>
+</body>
+</html>
