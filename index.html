@@ -508,7 +508,10 @@
         <a href="#charts" class="nav-link">Charts</a>
         <a href="#strategy" class="nav-link">Strategy</a>
         <a href="#future" class="nav-link">Future</a>
-        <a href="#deploy" class="nav-link">Deploy</a>
+        <a href="https://x.com/0xhustler18" target="_blank" rel="noopener" class="nav-link" style="display:flex;align-items:center;gap:5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.254 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          @0xhustler18
+        </a>
         <button class="btn-tip" onclick="openTip()">⬡ Send a tip</button>
       </div>
     </div>
@@ -520,7 +523,7 @@
       <div class="modal-title">Support this calculator</div>
       <div class="modal-sub">If this tool helped you model your TTT position, consider sending a tip. Copy the address below and send ETH from any wallet — no minimum, fully optional.</div>
       <div class="eth-box">
-        <div class="eth-addr" id="ethAddr">0xYOUR_ETH_ADDRESS_HERE</div>
+        <div class="eth-addr" id="ethAddr">0x16fbb3d3C84d3CDcb997191aA6fb422e851221CE</div>
         <button class="copy-btn" onclick="copyEth()">Copy</button>
       </div>
       <div class="modal-note">⚠ Double-check the address in your wallet before confirming. Transactions are irreversible.</div>
@@ -1036,108 +1039,6 @@
     </div>
   </section>
 
-  <!-- DEPLOY GUIDE -->
-  <section class="section" id="deploy">
-    <div class="container">
-      <div class="section-label">06 · DEPLOY THIS CALCULATOR</div>
-      <h2 class="section-title">GitHub → Vercel in 5 minutes</h2>
-      <p class="section-sub">This is a static site — pure HTML/CSS/JS. Vercel's edge network handles unlimited traffic. No backend, no database, no server costs.</p>
-
-      <div class="grid-2">
-        <div class="card">
-          <div style="font-size:12px;font-weight:500;color:var(--gold);margin-bottom:20px;">Step-by-step deployment</div>
-          <div class="deploy-steps">
-            <div class="deploy-step">
-              <div class="step-num">1</div>
-              <div class="step-body">
-                <div class="step-title">Set your ETH address</div>
-                <div class="step-desc">Open <code style="color:var(--teal)">index.html</code>, find <code style="color:var(--teal)">0x16fbb3d3C84d3CDcb997191aA6fb422e851221CE</code> and replace with your actual Ethereum address. Save the file.</div>
-              </div>
-            </div>
-            <div class="deploy-step">
-              <div class="step-num">2</div>
-              <div class="step-body">
-                <div class="step-title">Create a GitHub repository</div>
-                <div class="step-desc">Go to github.com → New repository → name it <code style="color:var(--teal)">ttt-calculator</code> → Public → Create.</div>
-              </div>
-            </div>
-            <div class="deploy-step">
-              <div class="step-num">3</div>
-              <div class="step-body">
-                <div class="step-title">Push your files</div>
-                <div class="code-block">git init
-git add index.html
-git commit -m "init: TTT calculator"
-git remote add origin https://github.com/YOUR_USER/ttt-calculator.git
-git push -u origin main</div>
-              </div>
-            </div>
-            <div class="deploy-step">
-              <div class="step-num">4</div>
-              <div class="step-body">
-                <div class="step-title">Deploy on Vercel</div>
-                <div class="step-desc">Go to vercel.com → Add New Project → Import your GitHub repo → Framework: <strong style="color:var(--text);">Other</strong> → Root Directory: <code style="color:var(--teal)">./</code> → Deploy. Vercel auto-detects the static HTML.</div>
-              </div>
-            </div>
-            <div class="deploy-step">
-              <div class="step-num">5</div>
-              <div class="step-body">
-                <div class="step-title">Custom domain (optional)</div>
-                <div class="step-desc">In Vercel → Project Settings → Domains → Add your domain. Add a CNAME record pointing to <code style="color:var(--teal)">cname.vercel-dns.com</code> in your DNS provider. Auto HTTPS included.</div>
-              </div>
-            </div>
-            <div class="deploy-step">
-              <div class="step-num">6</div>
-              <div class="step-body">
-                <div class="step-title">Future updates</div>
-                <div class="step-desc">Any push to the <code style="color:var(--teal)">main</code> branch auto-deploys. Preview URLs generated for every PR branch. Zero downtime deploys. Vercel's CDN caches globally — handles millions of requests with zero config.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:16px;">
-          <div class="card">
-            <div style="font-size:12px;font-weight:500;color:var(--teal);margin-bottom:12px;">Why this won't go down under traffic</div>
-            <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
-              <strong style="color:var(--text);">Pure static.</strong> No server processes, no database queries, no Node.js runtime. Every user gets the same pre-built HTML from Vercel's global CDN — 100+ edge nodes worldwide.<br><br>
-              <strong style="color:var(--text);">Chart.js from cdnjs.</strong> Cloudflare's CDN handles the JS library. Even if 50,000 users hit simultaneously, your Vercel site has no bottleneck.<br><br>
-              <strong style="color:var(--text);">Google Fonts via CDN.</strong> Fonts load from Google's global network — never from your domain.<br><br>
-              <strong style="color:var(--text);">Vercel free tier handles</strong> 100GB bandwidth/month. Paid tier is effectively unlimited.
-            </div>
-          </div>
-          <div class="card">
-            <div style="font-size:12px;font-weight:500;color:var(--gold);margin-bottom:12px;">Add a vercel.json for hardening</div>
-            <div class="code-block">{
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public,max-age=3600,s-maxage=86400"
-        }
-      ]
-    }
-  ]
-}</div>
-          </div>
-          <div class="card card-sm">
-            <div style="font-size:12px;font-weight:500;color:var(--purple);margin-bottom:6px;">Optional: analytics without backend</div>
-            <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">Add Vercel Analytics (free) with one script tag, or Plausible.io for privacy-first visitor tracking. No server required.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- FOOTER -->
   <footer>
